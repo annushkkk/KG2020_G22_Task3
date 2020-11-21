@@ -1,6 +1,8 @@
 package functions;
 
+import java.util.List;
+
 public interface IFunction {
-    double compute(double x);
-    Double getArg(int arg);
+    double compute(double x, List<Double> functionArgs);
+
 }

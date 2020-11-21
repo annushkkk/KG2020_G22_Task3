@@ -1,5 +1,6 @@
 
 
+import functions.FunctionG;
 import functions.IFunction;
 
 import javax.swing.*;
@@ -7,6 +8,7 @@ import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
+import java.util.List;
 
 public class DrawPanel extends JPanel implements MouseListener, MouseMotionListener, MouseWheelListener {
 
@@ -16,10 +18,11 @@ public class DrawPanel extends JPanel implements MouseListener, MouseMotionListe
         this.addMouseWheelListener(this);
     }
 
-    private ScreenConverter sc = new ScreenConverter(-2, 2, 4, 4, 800, 600);
+    private ScreenConverter sc = new ScreenConverter(-5, 5, 10, 10, 800, 600);
 
-    private Line axisX = new Line(-1, 0, 1, 0);
-    private Line axisY = new Line(0, -1, 0, 1);
+    private Line axisX;
+
+    private Line axisY;
     private ArrayList<Line> allLines = new ArrayList<>();
 
     @Override
@@ -30,48 +33,94 @@ public class DrawPanel extends JPanel implements MouseListener, MouseMotionListe
         Graphics2D gr = bi.createGraphics();
         gr.setColor(Color.WHITE);
         gr.fillRect(0, 0, getWidth(), getHeight());
+        gr.setColor(Color.BLACK);
+
+
+        for (int i = (int) sc.getxR(); i <= (int) (sc.getxR() + sc.getwR()); i++) {
+            gr.drawString(Integer.toString(i), (int) (sc.getwS() * (i - sc.getxR()) / sc.getwR()), sc.r2s(new RealPoint(0, 0)).getY());
+        }
+        for (int i = (int) sc.getyR(); i >= (int) (sc.getyR() - sc.gethR()); i--) {
+            gr.drawString(Integer.toString(i), sc.r2s(new RealPoint(0, 0)).getX(), (int) (sc.gethS() * (sc.getyR() - i) / sc.gethR()));
+        }
         gr.dispose();
         PixelDrawer pd = new BufferedImagePixelDrawer(bi);
         LineDrawer ld = new DDALineDrawer(pd);
         /**/
+
+
+        for (int i = (int) sc.getxR(); i <= (int) (sc.getxR() + sc.getwR()); i++) {
+            ld.drawLine(new ScreenPoint((int) (sc.getwS() * (i - sc.getxR()) / sc.getwR()), 0),
+                    new ScreenPoint((int) (sc.getwS() * (i - sc.getxR()) / sc.getwR()), sc.gethS()), Color.BLACK);
+
+        }
+        for (int i = (int) sc.getyR(); i >= (int) (sc.getyR() - sc.gethR()); i--) {
+            ld.drawLine(new ScreenPoint(0, (int) (sc.gethS() * (sc.getyR() - i) / sc.gethR())),
+                    new ScreenPoint(sc.getwS(), (int) (sc.gethS() * (sc.getyR() - i) / sc.gethR())), Color.BLACK);
+        }
         drawAll(ld);
         /**/
         g.drawImage(bi, 0, 0, null);
     }
 
     private void drawAll(LineDrawer ld) {
+        axisX = new Line(-getWidth(), 0, getWidth(), 0);
+        axisY = new Line(0, -getHeight(), 0, getHeight());
         drawLine(ld, axisX);
         drawLine(ld, axisY);
+
+
         for (Line q : allLines)
             drawLine(ld, q);
 
         if (function != null)
-
             drawFunction(ld);
         if (newLine != null)
             drawLine(ld, newLine);
 
     }
+    private Color color= new Color(100, 0, 0);
+    public void setColor(Color color) {
+        this.color = color;
+    }
+
+
 
     public void setFunction(IFunction function) {
         this.function = function;
     }
 
+    private List<Double> functionArgs;
+
+    public void setFunctionArgs(List<Double> functionArgs) {
+        this.functionArgs = functionArgs;
+    }
+
     private IFunction function;
 
     private void drawFunction(LineDrawer ld) {
-        float i = -1;
-        for (float x = (float) -0.9; x <=1; x+=0.1) {
-            ld.drawLine(sc.r2s(new RealPoint(i, function.compute(i))), sc.r2s(new RealPoint(x, function.compute(x))));
-            System.out.println("i");
-            System.out.println( function.compute(i));
-            i = x;
+        ArrayList<RealPoint> points = new ArrayList<>();
+
+        if (function instanceof FunctionG) {
+            for (float i = (float) sc.getxR(); i <= (sc.getxR() + sc.getwR()); i += 0.1) {
+                points.add(new RealPoint(function.compute(i, functionArgs), i));
+            }
+        } else {
+            for (float i = (float) sc.getxR(); i <= (sc.getxR() + sc.getwR()); i += 0.1) {
+                points.add(new RealPoint(i,function.compute(i, functionArgs)));
+            }
         }
-        repaint();
+        int pointsSize = points.size();
+        int x = 0;
+        for (int i = 1; i < pointsSize; i++) {
+            ld.drawLine(sc.r2s(new RealPoint(points.get(i).getX(), points.get(i).getY())), sc.r2s(new RealPoint(points.get(x).getX(), points.get(x).getY())), color);
+            x = i;
+        }
+
+
     }
 
     private void drawLine(LineDrawer ld, Line l) {
-        ld.drawLine(sc.r2s(l.getP1()), sc.r2s(l.getP2()));
+        ld.drawLine(sc.r2s(l.getP1()), sc.r2s(l.getP2()), Color.BLUE);
     }
 
     private ScreenPoint prevPoint = null;
